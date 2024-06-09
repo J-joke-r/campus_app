@@ -1,83 +1,76 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'ClubsProvider.dart';
-import 'EventsProvider.dart';
-import 'EventCalendarScreen.dart'; // Import your screens
-import 'StudentDashboardScreen.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-void main() {
-  runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => EventsProvider()),
-        ChangeNotifierProvider(create: (_) => ClubsProvider()),
-      ],
-      child: MyApp(),
-    ),
+import 'login_screen.dart';
+import 'register_screen.dart';
+import 'profile_screen.dart';
+import 'browse_skills_screen.dart';
+import 'skill_listing_detail_screen.dart';
+import 'create_edit_skill_listing_screen.dart';
+import 'browse_events_screen.dart';
+import 'event_detail_screen.dart';
+import 'create_edit_event_screen.dart';
+import 'browse_clubs_screen.dart';
+import 'club_detail_screen.dart';
+
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
   );
+  runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Campus App',
+      title: 'Campus Connect',
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        useMaterial3: true,
       ),
-      home: MyHomePage(),
+      home: StreamBuilder<User?>(
+        stream: FirebaseAuth.instance.authStateChanges(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return CircularProgressIndicator();
+          } else if (snapshot.hasData) {
+            // User is logged in
+            return ProfileScreen();
+          } else {
+            // User is not logged in
+            return LoginScreen();
+          }
+        },
+      ),
+      routes: {
+        '/register': (context) => RegisterScreen(),
+        '/profile': (context) => ProfileScreen(),
+        '/browse_skills': (context) => BrowseSkillsScreen(),
+        '/skill_listing_detail': (context) => SkillListingDetailScreen(
+              listingId: (ModalRoute.of(context)!.settings.arguments as String),
+            ),
+        '/create_edit_skill_listing': (context) {
+          final String? listingId = ModalRoute.of(context)?.settings.arguments as String?;
+          return CreateEditSkillListingScreen(listingId: listingId);
+        },
+        '/browse_events': (context) => BrowseEventsScreen(),
+        '/event_detail': (context) => EventDetailScreen(
+              eventId: (ModalRoute.of(context)!.settings.arguments as String),
+            ),
+        '/create_edit_event': (context) {
+          final String? eventId = ModalRoute.of(context)?.settings.arguments as String?;
+          return CreateEditEventScreen(eventId: eventId);
+        },
+        '/browse_clubs': (context) => BrowseClubsScreen(),
+        '/club_detail': (context) => ClubDetailScreen(
+              clubId: (ModalRoute.of(context)!.settings.arguments as String),
+            ),
+      },
     );
-  }
-}
-
-class MyHomePage extends StatefulWidget {
-  @override
-  _MyHomePageState createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  int _selectedIndex = 0; 
-
-  static const List<Widget> _widgetOptions = <Widget>[
-    StudentDashboardScreen(),
-    EventCalendarScreen(),    
-  ];
-
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: _widgetOptions.elementAt(_selectedIndex),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Dashboard',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.calendar_today),
-            label: 'Calendar',
-          ),
-         
-        ],
-        currentIndex: _selectedIndex,
-        selectedItemColor: Colors.amber[800],
-        onTap: _onItemTapped, 
-      ),
-    );
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    Provider.of<EventsProvider>(context, listen: false).fetchEvents();
-    Provider.of<ClubsProvider>(context, listen: false).fetchClubs();
   }
 }
